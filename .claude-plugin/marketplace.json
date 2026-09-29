@@ -1,0 +1,15 @@
+{
+  "name": "ticket2merge-marketplace",
+  "description": "Marketplace for the Ticket2Merge Claude Code plugin",
+  "owner": {
+    "name": "Space-O Technologies"
+  },
+  "plugins": [
+    {
+      "name": "ticket2merge",
+      "description": "Ticket → plan → approval → implement → audits → tests → manual commit → MR description, with hook-enforced git safety.",
+      "version": "1.3.0",
+      "source": "./"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "ticket2merge",
+  "version": "1.3.0",
+  "description": "Takes a development ticket from understanding to a merge-request description: plan, human approval, implementation, positive and adversarial audits, tests with Playwright, regression checks and a manual commit. Hook-enforced: it never changes git state.",
+  "author": {
+    "name": "Space-O Technologies"
+  },
+  "license": "MIT",
+  "keywords": ["jira", "workflow", "code-review", "testing", "playwright", "gitlab", "merge-request", "git-safety"]
+}
