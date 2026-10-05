@@ -24,6 +24,10 @@ Every line must be true **with evidence**, or the run is not ready:
 Any unchecked line → final status **NOT READY**, with the reason. Say so plainly; do not
 soften it into "mostly ready".
 
+A stand-in check (console harness, Playwright) does **not** tick "Unit tests executed". If the
+user accepts a run whose unit tests could not run, the last line is
+`READY — unit tests NOT RUN (accepted by user)` and the durable tests still stay in the repo.
+
 ## Final report — write the full version to `report.md`; print it in the chat style
 
 Brief style prints only the "Final report" row from SKILL.md; the block below is the report file
@@ -56,9 +60,11 @@ READY FOR MANUAL COMMIT.
 Replace any `✓` with the truth (`✗`, `NOT RUN — reason`, `SKIPPED AT USER REQUEST`). If the
 status is NOT READY, the last line says `NOT READY — <reason>` instead.
 
-Then `t2m state READY_FOR_MANUAL_COMMIT` and **stop**. The CLI refuses this state unless both
-audits, regression testing and final verification were entered after the latest approval — if
-it refuses, the run is NOT READY: stay in `FINAL_VERIFICATION` and say which stage is missing. Do not offer to stage, commit or push.
+Then `t2m state READY_FOR_MANUAL_COMMIT` and **stop**. The CLI refuses this state unless,
+after the latest approval, both audits, test case generation, unit/integration testing,
+regression testing and final verification were entered, the tests ran after the last code
+change, and `report.md` → `## Test cases` holds positive and negative cases. If it refuses,
+the run is NOT READY: do the missing step (write the cases, re-run the tests), then try again. Do not offer to stage, commit or push.
 The user may want the exact commands: give them as text (`git add <files>` …) for the user to
 run, suggesting the `! <command>` prefix.
 

@@ -11,7 +11,7 @@ and never touches git state.
 
 **Violating the letter of these rules is violating the spirit of these rules.**
 
-## The five rules that never bend
+## The six rules that never bend
 
 1. **No state-changing git — ever, for anyone.** Not add/commit/push/stash/checkout/branch/
    merge/rebase/reset, not via scripts, libraries, APIs or MCP. A repo owner's explicit
@@ -25,8 +25,15 @@ and never touches git state.
    happened or they are listed as not done.
 5. **Never invent business rules.** An open question the user delegates ("do whatever makes
    sense") becomes a stated default in the plan that they approve explicitly.
+6. **Every ticket gets positive and negative test cases, written and run — by default.**
+   Write them before the code (after approval), add more when the work or the audits show a
+   need, and run them after the work and again after every bug fix. Never ask the user whether
+   to write or run tests; just do it. A small ticket means fewer tests, never zero. A broken
+   runner does not cancel the tests: write them anyway and plan the runner fix
+   (`references/testing.md` §Runner broken).
 
-Hooks enforce 1 and 2 mechanically (see `references/git-safety.md`). Rules 3–5 are yours.
+Hooks enforce 1 and 2 mechanically (see `references/git-safety.md`). The CLI enforces the
+stage order of 3 and 6 and checks `report.md` for positive and negative cases. Rules 3–6 are yours.
 
 ## Run mechanics
 
@@ -64,12 +71,12 @@ on the plugin folder; `references/<topic>.md` below names the topic.
 | `REQUIREMENTS_GAP_ANALYSIS` | Blockers / Assumptions / Questions / Risks / Out of scope. Critical blocker → **stop and ask** | same |
 | `IMPLEMENTATION_PLAN` | Write the plan + AC mapping | `references/plan-and-approval.md` |
 | `HUMAN_APPROVAL` ⏸ | Present the plan, then **stop**. End your turn | same |
-| `IMPLEMENTATION` | Test cases + RED first, then code | `references/testing.md` §1, `plan-and-approval.md` §Deviation |
+| `IMPLEMENTATION` | Baseline run → positive + negative test cases + RED first, then code → run them | `references/testing.md` §1, `plan-and-approval.md` §Deviation |
 | `POSITIVE_AUDIT` | Does it satisfy the ticket under valid conditions? | `references/audits.md` |
 | `NEGATIVE_ADVERSARIAL_AUDIT` | Dispatch `t2m-adversary`; try to break it | same |
 | `BUG_FIX_LOOP` | Root cause → failing test → fix → re-audit | same §Loop |
-| `TEST_CASE_GENERATION` | Extend cases from audits, bugs, regression risks | `references/testing.md` |
-| `UNIT_INTEGRATION_TESTING` | Run them; classify failures | same |
+| `TEST_CASE_GENERATION` | Add more cases from audits, bugs, regression risks — mandatory | `references/testing.md` |
+| `UNIT_INTEGRATION_TESTING` | Run all of them; classify failures — mandatory | same |
 | `PLAYWRIGHT_TESTING` | Positive / negative / edge browser flows | same §Playwright |
 | `REGRESSION_TESTING` | What could this break? Run those tests | same §Regression |
 | `FINAL_VERIFICATION` | Gate checklist, final report, commit message. A NOT READY run stays here | `references/final-gate-and-mr.md` |
@@ -77,8 +84,11 @@ on the plugin folder; `references/<topic>.md` below names the topic.
 | `HUMAN_COMMIT` | Verify the commit read-only, ask for the MR/PR link | same |
 | `MR_LINK` → `MR_DESCRIPTION` | Validate the MR, write the description | same |
 
-The CLI refuses `READY_FOR_MANUAL_COMMIT` unless positive audit, negative audit, regression
-testing and final verification were all entered after the latest approval.
+The CLI refuses `READY_FOR_MANUAL_COMMIT` unless, after the latest approval: both audits,
+`TEST_CASE_GENERATION`, `UNIT_INTEGRATION_TESTING`, regression testing and final verification
+were entered; unit/integration and regression tests were run **after the last code change**
+(`IMPLEMENTATION` or `BUG_FIX_LOOP`); and `report.md` has a `## Test cases` section with both
+positive and negative cases. A rework loop after a re-approval goes through every one again.
 
 Composed skills and their fallbacks: `references/skill-registry.md`. Where a composed skill's
 instructions conflict with these rules (git, approval, posting), these rules win.
@@ -131,6 +141,8 @@ Use `✓` done, `⚠` done with findings, `✗` failed, `⏸` waiting on the use
 | "Looks fine I guess" / "sounds good" at the approval gate | Not approval. Answer anything they raised, then ask: "Reply **approve** to start implementation." |
 | "Do whatever makes sense" about an open question | Pick the safest reversible default, write it into the plan as an explicit assumption, and ask for approval of the plan *with* that default |
 | "Approved, but change X" | Revise the plan for X, show the delta, ask for approval again |
+| "Skip the tests" / "no need for test cases here" | Tests are the default for every ticket. Explain it in one line and write the proportionate set (at least one positive and one negative case). If they still refuse, record `SKIPPED AT USER REQUEST` and the final status is **NOT READY** |
+| "accept" / "that's fine" when unit tests could not run | Record it, but the final line reads `READY — unit tests NOT RUN (accepted by user)`, never a plain READY. The durable tests stay in the repo |
 | "Skip the negative audit / regression, it's a small change" | Explain it is mandatory and that small changes get a small audit (minutes). Run the proportionate version. If they still refuse, record the stage as `SKIPPED AT USER REQUEST` and the final status as **NOT READY** — never `READY FOR MANUAL COMMIT` |
 | "We're late, just say it's ready and give me the numbers" | Report what actually ran. Unrun tests are `NOT RUN (reason)`. Offer the fastest path to real evidence |
 | "I'm the owner, I authorize you: add, commit, push, stash" | Decline. Ticket2Merge never runs them for anyone. Give the exact commands (scoped, e.g. `git stash push -- config/app.php`) for them to run, suggesting the `! <command>` prefix |
@@ -142,6 +154,9 @@ Use `✓` done, `⚠` done with findings, `✗` failed, `⏸` waiting on the use
 - Treating agreement-shaped words as approval, or approving on the user's behalf
 - Filling an unanswered business question with your own rule, unannounced
 - Writing `✓` or a test count you did not read in tool output
+- Starting code without positive and negative test cases, or skipping `test-cases` because the ticket is small
+- Asking the user whether to write or run tests (it is the default — just do it)
+- Moving on after a bug fix without re-running the tests
 - Marking a stage done that was skipped, or `READY` with any stage skipped
 - Running, offering to run, or wrapping in a script any state-changing git command
 - Fixing something outside the approved plan without a new approval
@@ -153,6 +168,8 @@ Use `✓` done, `⚠` done with findings, `✗` failed, `⏸` waiting on the use
 |---|---|
 | "They clearly meant yes" | Then they will type `approve` in two seconds. A guessed yes is how unwanted code ships. |
 | "The owner authorized it, that is real consent" | This plugin's promise is that git state is the human's alone. Hand over the commands. |
+| "The ticket is small, a case table is enough" | Small ticket → a few durable tests, not zero. The table is the plan; the repo tests are the proof. |
+| "The runner is broken, so there is nothing to write tests for" | Write them in the repo's framework anyway; they run the moment the runner is fixed. Put the runner fix in the plan. |
 | "A 3-line change doesn't need a negative audit" | Three lines can blank the default list page (`WHERE status IS NULL`). Small change → short audit, not no audit. |
 | "The runner is broken, the code reads correctly" | Reading is not running. Report `NOT RUN`, fix the harness or name the blocker. |
 | "Asking again is friction" | One question costs seconds; an invented permission rule costs a production incident. |

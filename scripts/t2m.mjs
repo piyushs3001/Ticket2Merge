@@ -13,7 +13,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { overlaps, realResolve } from './lib/paths.mjs';
-import { STATES, isActive, loadRunStatus, modelSetState, saveRun, t2mHome } from './lib/state.mjs';
+import { STATES, isActive, loadRunStatus, modelSetState, reportTestCaseGaps, saveRun, t2mHome } from './lib/state.mjs';
 
 function parseArgs(argv) {
   const positional = [];
@@ -66,6 +66,13 @@ function main() {
       modelSetState(run, arg, opts.note);
     } catch (err) {
       fail(err.message);
+    }
+    if (arg === 'READY_FOR_MANUAL_COMMIT') {
+      if (!run.reportDir) fail('cannot be READY_FOR_MANUAL_COMMIT: no report folder set — `t2m set --report-dir <dir>` first');
+      let text = null;
+      try { text = readFileSync(path.join(run.reportDir, 'report.md'), 'utf8'); } catch { /* missing */ }
+      const gaps = reportTestCaseGaps(text);
+      if (gaps.length) fail(`cannot be READY_FOR_MANUAL_COMMIT: ${gaps.join('; ')} — report the run as NOT READY instead`);
     }
     saveRun(run);
     return print(view(run));

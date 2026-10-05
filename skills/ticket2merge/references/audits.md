@@ -65,6 +65,9 @@ find bug → root cause → failing regression test (watch it fail) → fix → 
 → broader tests → re-run positive audit → re-run negative audit (scoped to the fix)
 ```
 
+After the loop, enter `UNIT_INTEGRATION_TESTING` and `REGRESSION_TESTING` again — the CLI
+refuses READY when the tests last ran before the latest bug fix.
+
 With the `test-cases` skill: use its BUG-FIRST mode (case first, prove it fails, then fix).
 
 Exit only when: no Critical, no High, every Medium fixed or explicitly documented with a reason,

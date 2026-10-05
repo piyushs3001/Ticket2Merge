@@ -30,7 +30,11 @@ export const STATES = [
 ];
 const USER_ONLY = new Set(['APPROVED', 'CLOSED']);
 // The run cannot be declared ready unless these stages were entered after the latest approval.
-const REQUIRED_BEFORE_READY = ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'REGRESSION_TESTING', 'FINAL_VERIFICATION'];
+const REQUIRED_BEFORE_READY = ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'TEST_CASE_GENERATION',
+  'UNIT_INTEGRATION_TESTING', 'REGRESSION_TESTING', 'FINAL_VERIFICATION'];
+// Stages that change code, and the test runs that must come after the last of them.
+const CODE_CHANGING = new Set(['IMPLEMENTATION', 'BUG_FIX_LOOP']);
+const RERUN_AFTER_CODE_CHANGE = ['UNIT_INTEGRATION_TESTING', 'REGRESSION_TESTING'];
 const APPROVAL_INDEX = STATES.indexOf('HUMAN_APPROVAL');
 
 export const t2mHome = () => process.env.T2M_HOME || path.join(homedir(), '.claude', 'ticket2merge');
@@ -124,6 +128,13 @@ export function modelSetState(run, state, note) {
     if (missing.length) {
       throw new Error(`cannot be READY_FOR_MANUAL_COMMIT: ${missing.join(', ')} not done since the approval — report the run as NOT READY instead`);
     }
+    const states = run.history.map((h) => h.state);
+    const lastChange = states.map((st) => CODE_CHANGING.has(st)).lastIndexOf(true);
+    const afterChange = new Set(states.slice(lastChange + 1));
+    const stale = RERUN_AFTER_CODE_CHANGE.filter((st) => !afterChange.has(st));
+    if (stale.length) {
+      throw new Error(`cannot be READY_FOR_MANUAL_COMMIT: run ${stale.join(', ')} again after the last code change (${states[lastChange]})`);
+    }
   }
   if (idx <= APPROVAL_INDEX && run.approved) {
     run.approved = false;
@@ -132,6 +143,22 @@ export function modelSetState(run, state, note) {
   run.state = state;
   run.history.push({ state, at: now(), by: 'model', ...(note ? { note } : {}) });
   return run;
+}
+
+// What report.md still lacks before the run can be ready: a "Test cases" section holding both
+// positive and negative cases. Returns [] when nothing is missing.
+export function reportTestCaseGaps(text) {
+  if (typeof text !== 'string') return ['report.md is missing — write the Test cases section into it'];
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^#{1,6}\s.*\btest cases\b/i.test(l));
+  if (start < 0) return ['report.md has no "Test cases" section'];
+  const level = lines[start].match(/^#+/)[0].length;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => { const m = l.match(/^(#{1,6})\s/); return m && m[1].length <= level; });
+  const section = (end < 0 ? rest : rest.slice(0, end)).join('\n');
+  return ['positive', 'negative']
+    .filter((type) => !new RegExp(`\\b${type}\\b`, 'i').test(section))
+    .map((type) => `the Test cases section in report.md has no ${type} cases`);
 }
 
 export function userApprove(run, prompt) {

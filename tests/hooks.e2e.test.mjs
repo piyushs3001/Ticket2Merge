@@ -128,13 +128,37 @@ test('git-capable MCP tools cannot merge or commit; others are untouched', () =>
   assert.equal(mcp('mcp__playwright__browser_click'), null);
 });
 
-test('reporting a manual commit at the commit gate prompts verification', () => {
+const CASES = '## Test cases\n\n| ID | Type |\n|---|---|\n| TC-1 | Positive |\n| TC-2 | Negative |\n';
+function toFinalVerification(reportText) {
   prompt('PROJ-1');
+  const report = mkdtempSync(path.join(tmpdir(), 't2m-report-'));
+  if (reportText !== null) writeFileSync(path.join(report, 'report.md'), reportText);
+  assert.equal(cli('set', '--report-dir', report).status, 0);
   cli('state', 'HUMAN_APPROVAL');
   prompt('approved');
-  for (const s of ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'REGRESSION_TESTING', 'FINAL_VERIFICATION']) cli('state', s);
+  for (const s of ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'TEST_CASE_GENERATION', 'UNIT_INTEGRATION_TESTING',
+    'REGRESSION_TESTING', 'FINAL_VERIFICATION']) assert.equal(cli('state', s).status, 0);
+}
+
+test('reporting a manual commit at the commit gate prompts verification', () => {
+  toFinalVerification(CASES);
   assert.equal(cli('state', 'READY_FOR_MANUAL_COMMIT').status, 0);
   assert.match(context(prompt('I committed the changes')), /verify/i);
+});
+
+test('READY is refused while report.md lacks positive and negative test cases', () => {
+  toFinalVerification('## Test cases\n\n| TC-1 | Positive |\n');
+  const r = cli('state', 'READY_FOR_MANUAL_COMMIT');
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /negative/i);
+  assert.equal(runState().state, 'FINAL_VERIFICATION');
+});
+
+test('READY is refused when there is no report.md at all', () => {
+  toFinalVerification(null);
+  const r = cli('state', 'READY_FOR_MANUAL_COMMIT');
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /report\.md/);
 });
 
 test('/ticket2merge stop closes the run and releases the guard', () => {

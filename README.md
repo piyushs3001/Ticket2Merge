@@ -20,8 +20,11 @@ Ticket → Understand → Investigate → Plan → ⏸ YOUR APPROVAL → Impleme
 - **Short, plain-language chat.** Each message is a one-line gist, a few bullets and the next
   step. Questions come with a recommended answer. The full detail goes in the report file.
   (`"style": "detailed"` to change it.)
-- **It runs the tests, it doesn't just write them.** Unit, integration and Playwright, with
-  real runner output. A test that didn't run is reported as `NOT RUN`, never as passed.
+- **Tests on every ticket, by default.** Positive and negative test cases are written before
+  the code, extended after the audits, and run after the work and after every bug fix — you
+  are never asked whether to. Unit, integration and Playwright, with real runner output. A test
+  that didn't run is reported as `NOT RUN`, never as passed. The run cannot be marked ready
+  without them.
 
 ---
 

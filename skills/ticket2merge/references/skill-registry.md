@@ -9,7 +9,7 @@ you fall back, say so in the report ("fallback: native — `test-cases` not inst
 | Intake | `jira-ticket-info` | Ticket identity + metadata (fields only — it does not read the description) | Atlassian MCP `getJiraIssue` |
 | Gap analysis | `prompt-check` (its `scripts/score.py`, no `--log`) | Thin-ticket signal | Native gap analysis only |
 | Investigation | `rlm` | >100 relevant files | Parallel Explore subagents |
-| Test cases / runs | `test-cases` | PLAN-NEW, EXTEND, RED, RUN, RETEST, REGRESSION, BUG-FIRST, browser pass | Case table in report + repo-framework tests |
+| Test cases / runs | `test-cases` — **always, every ticket, no size exception** | PLAN-NEW, EXTEND, RED, RUN, RETEST, REGRESSION, BUG-FIRST, browser pass | Case table in report + repo-framework tests |
 | Implementation | `superpowers:test-driven-development` | RED → GREEN → REFACTOR | Same discipline, natively |
 | Bug loop | `superpowers:systematic-debugging` | Root cause before fix | Same discipline, natively |
 | Audit | built-in `code-review` (no `--fix`), `security-review` | Diff review, security pass | `t2m-adversary` covers both |

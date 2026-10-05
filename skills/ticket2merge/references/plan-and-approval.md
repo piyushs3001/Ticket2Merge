@@ -9,8 +9,11 @@
 5. **Data changes** — schema, migrations, backward compatibility, data transformation, or `None`.
 6. **API changes** — endpoints, request/response, validation, error behaviour, or `None`.
 7. **UI changes** — pages, components, flows, loading / error / success states, accessibility, or `None`.
-8. **Test strategy** — unit, integration/API, Playwright (which mode — see `testing.md`),
-   positive, negative, edge, regression. Name the real commands.
+8. **Test strategy** — always present, never `None`. The positive and negative cases you
+   will write (at least one of each), edge and regression cases, the layer of each (unit,
+   integration/API, Playwright — which mode, see `testing.md`), the test files to create or
+   extend, and the real commands. Runner known to be broken → a "Fix the test runner" item
+   or a named stand-in (`testing.md` §Runner broken).
 9. **Assumptions** — every default you chose, including delegated questions.
 10. **Risks**.
 11. **Acceptance-criteria mapping** — every `R#` / `AC#` → planned change → how it is validated.

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0 — 2026-10-05
+
+- **Tests are the default for every ticket (rule 6):** positive and negative test cases are
+  written before the code, extended after the audits, and run after the work and after every
+  bug fix — without asking the user. Small ticket → fewer tests, never zero; `test-cases` is
+  used whatever the ticket size.
+- **CLI gate:** `READY_FOR_MANUAL_COMMIT` now also needs `TEST_CASE_GENERATION` and
+  `UNIT_INTEGRATION_TESTING` after the latest approval, unit/integration and regression runs
+  after the last code change (`IMPLEMENTATION` / `BUG_FIX_LOOP`), and a `## Test cases`
+  section in `report.md` with both positive and negative cases.
+- **Broken test runner:** durable tests are still written in the repo; the runner fix becomes a
+  plan item (or a scoped deviation) instead of a silent `NOT RUN`. A stand-in check no longer
+  ticks "Unit tests executed"; a user-accepted run reads `READY — unit tests NOT RUN (accepted by user)`.
+
 ## 1.3.0 — 2026-09-29
 
 - **Brief chat style (default):** every message is a one-line status + gist, ≤4 bullets (~60 words), then the next

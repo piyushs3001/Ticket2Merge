@@ -12,7 +12,7 @@ import { checkBash } from '../scripts/lib/bash-policy.mjs';
 import { checkBashRepoWrites } from '../scripts/lib/repo-write-policy.mjs';
 import { checkEdit } from '../scripts/lib/edit-policy.mjs';
 import { checkMcp } from '../scripts/lib/mcp-policy.mjs';
-import { newRun, modelSetState, userApprove } from '../scripts/lib/state.mjs';
+import { newRun, modelSetState, userApprove, reportTestCaseGaps } from '../scripts/lib/state.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = (p) => realpathSync(mkdtempSync(path.join(tmpdir(), p)));
@@ -207,19 +207,61 @@ function approvedRun() {
   userApprove(run, 'approve');
   return run;
 }
-test('M3: READY_FOR_MANUAL_COMMIT needs both audits, regression and final verification after approval', () => {
+const FULL_PASS = ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'TEST_CASE_GENERATION', 'UNIT_INTEGRATION_TESTING',
+  'REGRESSION_TESTING', 'FINAL_VERIFICATION'];
+test('M3: READY_FOR_MANUAL_COMMIT needs audits, test stages, regression and final verification after approval', () => {
   const run = approvedRun();
   assert.throws(() => modelSetState(run, 'READY_FOR_MANUAL_COMMIT'), /NEGATIVE_ADVERSARIAL_AUDIT|POSITIVE_AUDIT/);
-  for (const s of ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'REGRESSION_TESTING', 'FINAL_VERIFICATION']) modelSetState(run, s);
+  for (const s of FULL_PASS) modelSetState(run, s);
   modelSetState(run, 'READY_FOR_MANUAL_COMMIT');
   assert.equal(run.state, 'READY_FOR_MANUAL_COMMIT');
 });
 test('M3: audits from before a re-approval do not count', () => {
   const run = approvedRun();
-  for (const s of ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'REGRESSION_TESTING', 'FINAL_VERIFICATION']) modelSetState(run, s);
+  for (const s of FULL_PASS) modelSetState(run, s);
   modelSetState(run, 'HUMAN_APPROVAL', 'deviation');
   userApprove(run, 'approved');
   assert.throws(() => modelSetState(run, 'READY_FOR_MANUAL_COMMIT'));
+});
+test('M3: writing and running test cases cannot be skipped', () => {
+  for (const skipped of ['TEST_CASE_GENERATION', 'UNIT_INTEGRATION_TESTING']) {
+    const run = approvedRun();
+    for (const s of FULL_PASS.filter((x) => x !== skipped)) modelSetState(run, s);
+    assert.throws(() => modelSetState(run, 'READY_FOR_MANUAL_COMMIT'), new RegExp(skipped));
+  }
+});
+test('M3: a rework loop after re-approval must write and run tests again', () => {
+  const run = approvedRun();
+  for (const s of FULL_PASS) modelSetState(run, s);
+  modelSetState(run, 'HUMAN_APPROVAL', 'deviation');
+  userApprove(run, 'approved');
+  for (const s of ['POSITIVE_AUDIT', 'NEGATIVE_ADVERSARIAL_AUDIT', 'REGRESSION_TESTING', 'FINAL_VERIFICATION']) modelSetState(run, s);
+  assert.throws(() => modelSetState(run, 'READY_FOR_MANUAL_COMMIT'), /TEST_CASE_GENERATION, UNIT_INTEGRATION_TESTING/);
+});
+test('M3: tests must run again after a bug fix', () => {
+  const run = approvedRun();
+  for (const s of FULL_PASS.slice(0, -1)) modelSetState(run, s);
+  modelSetState(run, 'BUG_FIX_LOOP');
+  modelSetState(run, 'FINAL_VERIFICATION');
+  assert.throws(() => modelSetState(run, 'READY_FOR_MANUAL_COMMIT'), /UNIT_INTEGRATION_TESTING, REGRESSION_TESTING again after the last code change \(BUG_FIX_LOOP\)/);
+  for (const s of ['UNIT_INTEGRATION_TESTING', 'REGRESSION_TESTING', 'FINAL_VERIFICATION']) modelSetState(run, s);
+  modelSetState(run, 'READY_FOR_MANUAL_COMMIT');
+  assert.equal(run.state, 'READY_FOR_MANUAL_COMMIT');
+});
+
+// --- M4: the report must hold both positive and negative test cases ----------------
+test('M4: a report without a Test cases section is refused', () => {
+  assert.match(reportTestCaseGaps('# Report\n\n## Plan\nPositive and negative things\n').join(' '), /Test cases/);
+  assert.match(reportTestCaseGaps(null).join(' '), /report\.md/);
+});
+test('M4: the Test cases section needs both positive and negative cases', () => {
+  const only = (type) => `## 6. Test cases\n\n| ID | Type |\n|---|---|\n| TC-1 | ${type} |\n\n## 7. Test runs\nNegative words here do not count\n`;
+  assert.match(reportTestCaseGaps(only('Positive')).join(' '), /negative/i);
+  assert.match(reportTestCaseGaps(only('Negative')).join(' '), /positive/i);
+});
+test('M4: a sub-heading inside the Test cases section still counts', () => {
+  const text = '## Test cases\n\n### Positive\n| TC-1 | Positive |\n\n### Negative\n| TC-2 | Negative |\n\n## Final\n';
+  assert.deepEqual(reportTestCaseGaps(text), []);
 });
 
 // --- C1 / C3 / H4 end to end through the real hook scripts ------------------------

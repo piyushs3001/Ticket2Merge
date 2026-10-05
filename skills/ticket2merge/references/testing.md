@@ -2,6 +2,23 @@
 
 Tests validate behaviour, not coverage. Every test names the production break it catches.
 
+**Default for every ticket — never ask the user whether to write or run tests:**
+
+```
+approval → baseline run → write positive + negative cases → RED → code → run (GREEN)
+        → audits → add more cases if needed → run all → bug fix? → run again → regression
+```
+
+- Every ticket has **at least one positive and one negative case**, and durable automated tests
+  in the repo for them. Size changes how many, never whether.
+- `test-cases` installed → always use it, whatever the ticket size.
+- Add cases whenever the work, an audit or a bug shows a gap — during or after the work.
+- After any code change (a bug fix, a review fix, a deviation) re-run the affected tests and
+  the regression set. The CLI refuses READY if tests were not run after the last code change.
+- Write the cases into `report.md` under a heading named exactly `## Test cases`, with the
+  `Type` column holding `Positive` / `Negative` / `Edge` / `Regression`. The CLI refuses READY
+  without positive and negative cases there.
+
 ## 1. Test cases first — right after approval, before code
 
 **Baseline first.** Test runners count as repo writers, so they cannot run before approval.
@@ -10,16 +27,32 @@ Its failures are your evidence for "pre-existing failure" later.
 
 - `test-cases` skill available → invoke it in **PLAN-NEW** (no spec for the module) or
   **EXTEND** (spec exists) mode for the ticket's `R#/AC#`, then its **RED** step: Critical/High
-  cases must fail for the right reason against the unbuilt feature.
-- Not available → write the positive and negative cases as a table in `report.md` → **Test
-  cases** (`ID · Type · Priority · Action · Expected · Layer · Status`), then write the automated
-  tests in the repo's own framework and watch them fail (`superpowers:test-driven-development`
-  when available).
-- Implement to green. Durable tests live in the repo, in its existing test structure.
+  cases must fail for the right reason against the unbuilt feature. Copy (or link) its case
+  list into `report.md` → `## Test cases`.
+- Not available → write the positive and negative cases as a table in `report.md` →
+  `## Test cases` (`ID · Type · Priority · Action · Expected · Layer · Status`), then write the
+  automated tests in the repo's own framework and watch them fail
+  (`superpowers:test-driven-development` when available).
+- Implement to green, then run the new tests and the related existing ones. Durable tests live
+  in the repo, in its existing test structure.
 
-## 2. TEST_CASE_GENERATION — after the audits
+## Runner broken
 
-Extend the cases from: acceptance criteria, implementation behaviour, positive audit, negative
+A runner that will not start does not cancel the tests.
+
+1. **Known before the plan** (memory, CLAUDE.md, an earlier report) → the plan carries a
+   "Fix the test runner" item (files, change, why) or names the stand-in, and the user
+   approves it with the plan.
+2. **Found at the baseline run** → it is a deviation: describe the smallest runner fix and ask
+   for approval of that scope (`plan-and-approval.md` §Deviation). Meanwhile keep going.
+3. **Always** write the durable tests in the repo's framework anyway, so they run the moment
+   the runner works. Also run the cases by the best available stand-in (console harness,
+   Playwright, API call) and report both: `Unit: NOT RUN — <error> · stand-in 8/8`.
+4. Never install packages or change test tooling outside an approved plan item.
+
+## 2. TEST_CASE_GENERATION — after the audits (mandatory, every ticket)
+
+Add the new cases to `## Test cases` and to the repo tests. Extend the cases from: acceptance criteria, implementation behaviour, positive audit, negative
 audit, discovered bugs, regression risks, edge cases, affected existing functionality.
 (`test-cases` EXTEND / BUG-FIRST.) Build the matrix, marking each cell ✓ or `N/A — reason`:
 
@@ -40,7 +73,7 @@ Playwright → 5. broader suite → 6. final regression suite. Adapt to the repo
 For each run record: command · tests · passed · failed · skipped · warnings · result. Numbers
 come from the runner's output — paste the summary line. A runner that will not start is
 `NOT RUN — <verbatim error>`, never a pass. Do not repair the project's test tooling or install
-packages as a side quest; report the blocker.
+packages as a side quest — follow §Runner broken.
 
 Failure classes (never label an implementation failure "environment" without evidence):
 
