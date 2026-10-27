@@ -34,6 +34,12 @@ const REQUEST_EXCLUDES = [
   /^\S+\s+(info|details?|status|priority|labels?|reporter|fields?)\b/,
 ];
 
+// Messages the harness relays in the user's turn (subagent hand-backs, task notifications).
+// They carry model output, not the user's words, so they never start a run or approve one.
+const RELAYED_RE = /^(Another Claude session sent a message:|<agent-message\b|<task-notification>)/;
+
+export const isRelayedMessage = (prompt) => RELAYED_RE.test((prompt || '').trimStart());
+
 const uniq = (xs) => [...new Set(xs)];
 
 function extractKeys(text, cfg) {
@@ -60,7 +66,7 @@ function extractKeys(text, cfg) {
 
 export function classifyPrompt(prompt, cfg = {}) {
   const text = (prompt || '').trim();
-  if (!text) return null;
+  if (!text || isRelayedMessage(text)) return null;
 
   const cmd = COMMAND_RE.exec(text);
   if (cmd) {
@@ -77,8 +83,9 @@ export function classifyPrompt(prompt, cfg = {}) {
 
   if (cfg.autoTrigger === false) return null;
 
-  // Naming the plugin is an explicit request, so the projectKeys filter does not apply.
-  const explicit = /\b(ticket2merge|t2m)\b/i.test(text);
+  // Naming the plugin on the first line is an explicit request, so the projectKeys filter
+  // does not apply. A mention further down is pasted text (an MR description, a report).
+  const explicit = /\b(ticket2merge|t2m)\b/i.test(text.split('\n')[0]);
   const { keys, anyLower, url, withoutUrls } = extractKeys(text, explicit ? {} : cfg);
   if (keys.length !== 1) return null;
   const hit = { kind: 'ticket', key: keys[0], url };

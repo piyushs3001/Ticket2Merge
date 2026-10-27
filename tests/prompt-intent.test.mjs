@@ -116,3 +116,26 @@ for (const p of ['I committed the changes', 'committed', 'done, committed and pu
 for (const p of ['commit it for me', 'should I commit?', 'not committed yet']) {
   test(`not a commit report: ${p}`, () => assert.equal(reportsCommit(p), false));
 }
+
+// --- relayed messages and passing mentions ----------------------------------------
+
+const HANDBACK = [
+  'Another Claude session sent a message:',
+  '<agent-message from="a4647518c46f31bc3">',
+  '  ### Stats',
+  '  | "config via `Json::htmlEncode`" (Ticket2Merge evidence) | ok |',
+  '  `merge-base(origin/milestone-oct-2026, head)` = `67d2030` = base_sha.',
+  '</agent-message>',
+].join('\n');
+
+test('a subagent hand-back is not the user dropping a ticket', () => {
+  assert.equal(ticket(HANDBACK), null);
+});
+
+test('a task notification is not the user dropping a ticket', () => {
+  assert.equal(ticket('<task-notification>\n<summary>Agent "PROJ-12 review" finished</summary>\n</task-notification>'), null);
+});
+
+test('naming the plugin deep inside pasted text is not an explicit request', () => {
+  assert.equal(ticket('Here is the MR description:\nVerified with Ticket2Merge evidence.\nBase branch: milestone-oct-2026'), null);
+});

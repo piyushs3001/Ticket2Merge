@@ -4,7 +4,7 @@
 
 import { loadConfig } from '../lib/config.mjs';
 import { addContext, cliHint, gitTopLevel, readEvent } from '../lib/hook-io.mjs';
-import { classifyPrompt, isConditionalApproval, reportsCommit } from '../lib/prompt-intent.mjs';
+import { classifyPrompt, isConditionalApproval, isRelayedMessage, reportsCommit } from '../lib/prompt-intent.mjs';
 import { closedStub, isActive, listRuns, loadRunStatus, newRun, saveRun, userApprove, userClose } from '../lib/state.mjs';
 
 const EVENT = 'UserPromptSubmit';
@@ -108,6 +108,7 @@ function handleActiveRun(run, prompt) {
 async function main() {
   const event = await readEvent();
   const prompt = typeof event.prompt === 'string' ? event.prompt : '';
+  if (isRelayedMessage(prompt)) return null;
   const { status, run } = loadRunStatus(event.session_id);
   const cls = classifyPrompt(prompt, loadConfig(run?.repoRoots?.[0] || gitTopLevel(event.cwd || process.cwd())));
 

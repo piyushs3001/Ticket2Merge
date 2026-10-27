@@ -47,6 +47,11 @@ const INVALID_STATE =
   'Ticket2Merge: this session\'s run state is unreadable or has been modified outside the t2m CLI, ' +
   'so every guarded tool is blocked. Tell the user; they can reset it with `/ticket2merge stop`.';
 
+// Without this, a run started by mistake reads as "finish the setup" and the user stays locked in.
+const mistakenRunHint = (run) =>
+  `(Ticket2Merge run for ${run.ticket?.key || 'an untitled ticket'}. If this chat is not ticket work, ` +
+  'tell the user to send `/ticket2merge stop` to end the run.)';
+
 async function main() {
   let event;
   try {
@@ -63,7 +68,7 @@ async function main() {
   if (!isActive(run)) return;
   try {
     const verdict = decide(event, run);
-    if (!verdict.allow) denyTool(verdict.reason);
+    if (!verdict.allow) denyTool(`${verdict.reason} ${mistakenRunHint(run)}`);
   } catch (err) {
     denyTool(`Ticket2Merge guard error (${err.message}); the call was blocked to stay safe. Retry with a simpler command.`);
   }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.1 — 2026-10-27
+
+- **Fix — false auto-activation from relayed messages:** subagent hand-backs and task
+  notifications arrive in the user's turn but are model output. They no longer start a run,
+  count as approval, or report a commit. Seen when an MR review report mentioned
+  "Ticket2Merge" and the branch `milestone-oct-2026`, which started a run for `OCT-2026` and
+  blocked the review file write.
+- **Fix — explicit mention:** "ticket2merge" / "t2m" counts as an explicit request only on the
+  prompt's first line; a mention inside pasted text (an MR description, a report) does not.
+- **Block messages name the run and the way out:** every denied tool call now says which
+  ticket the run is for and that the user can send `/ticket2merge stop` if the chat is not
+  ticket work, so a mistaken run no longer reads as "finish the setup".
+
 ## 1.4.0 — 2026-10-05
 
 - **Tests are the default for every ticket (rule 6):** positive and negative test cases are
